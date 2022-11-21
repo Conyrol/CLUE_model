@@ -85,7 +85,7 @@ def get_config(parse = True, **optional_kwargs):
     parser.add_argument('--optimizer', type=str, default='Adam')
     parser.add_argument('--alpha_list', type=list, default=[3, 2.75, 2.5, 2.25, 2, 1.75, 1.5, 1.25, 1.0, 0])
     parser.add_argument('--output_size', type=int, default=2)
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--n_epoch', type=int, default=5)
     parser.add_argument('--only_base_model', type=str2bool, default=False)
     parser.add_argument('--only_text_model', type=str2bool, default=False)
@@ -103,7 +103,7 @@ def get_config(parse = True, **optional_kwargs):
     parser.add_argument('--tmodel_hidden_size', type=int, default=128)
     parser.add_argument('--tmodel_embedding_size', type=int, default=300)
     parser.add_argument('--tmodel_rnncell', type=str, default='lstm')
-    parser.add_argument('--tmodel_learning_rate', type=float, default=3e-5)
+    parser.add_argument('--tmodel_learning_rate', type=float, default=1e-5)
     parser.add_argument('--tmodel_weight_decay', type=float, default=1e-5)
 
     # MISA config
@@ -159,7 +159,7 @@ def get_config(parse = True, **optional_kwargs):
     
     elif kwargs.data == "mosei":
         kwargs.num_classes = kwargs.output_size
-        kwargs.batch_size = 12
+        kwargs.batch_size = 16
     else:
         print("No dataset mentioned")
         exit()

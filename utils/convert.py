@@ -39,7 +39,7 @@ def change_to_classify(y, config):
     for i in y:
         sig = math.sqrt(config.variance)  # 标准差δ
         x = np.array([-3, -2, -1, 0, 1, 2, 3])
-        y_sig = np.exp(-(x - i[0].item()) ** 2 / (2 * sig ** 2)) / (math.sqrt(2 * math.pi) * sig)
+        y_sig = np.exp(-(x - i.item()) ** 2 / (2 * sig ** 2)) / (math.sqrt(2 * math.pi) * sig)
         data = y_sig / np.sum(y_sig)
         over_sample.append(data)
         over_sample2.append([data[0] + data[1] + data[2], data[3] + data[4] + data[5] + data[6]])

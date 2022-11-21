@@ -11,12 +11,12 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from create_dataset import Data_Reader, PAD
+from create_dataset import Data_Reader, PAD, UNK
 
 def return_unk():
     return UNK
 
-def change(i):    
+def change(i):
     if i < -3: return 0
     elif i > 3: return 6
     else: return int(round(i)) + 3
@@ -145,6 +145,7 @@ if __name__ == '__main__':
         for key2, value2 in value1.items():
             avg_best_metrics[key1][key2] = value2 / 3.0
     
+    print("----------------------------------")
     print("acc2: ")
     print((acc2_list[0] + acc2_list[1] + acc2_list[2]) / 3.0)
     print("acc2_nonzero: ")
@@ -152,6 +153,9 @@ if __name__ == '__main__':
     print("acc7: ")
     print((acc7_list[0] + acc7_list[1] + acc7_list[2]) / 3.0)
     
+    print("acc7_list: ")
     print(acc7_list)
+    print("acc2_list: ")
     print(acc2_list)
+    print("acc2_nonzero_list: ")
     print(acc2_nonzero_list)

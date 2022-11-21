@@ -226,6 +226,7 @@ class SELF_MM(nn.Module):
         update_single_center(mode='vision')
     
     def init_labels(self, indexes, m_labels):
+        m_labels = m_labels.float()
         self.label_map['fusion'][indexes] = m_labels
         self.label_map['text'][indexes] = m_labels
         self.label_map['audio'][indexes] = m_labels
@@ -281,7 +282,7 @@ class AuViSubNet(nn.Module):
         x: (batch_size, sequence_len, in_size)
         '''
         lengths = lengths.cpu()
-        packed_sequence = pack_padded_sequence(x, lengths)
+        packed_sequence = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         _, final_states = self.rnn(packed_sequence)
         h = self.dropout(final_states[0].squeeze())
         y_1 = self.linear_1(h)

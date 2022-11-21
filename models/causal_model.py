@@ -39,26 +39,45 @@ class Causal_Model(nn.Module):
         
 
         # multimodel -- textmodel
-        rnn = nn.LSTM if self.config.tmodel_rnncell == "lstm" else nn.GRU
-        self.trnn1 = rnn(self.embedding_size, self.embedding_size, bidirectional=True)
-        self.trnn2 = rnn(2 * self.embedding_size, self.embedding_size, bidirectional=True)
-        self.tlayer_norm = nn.LayerNorm((2 * self.embedding_size,))
+        if self.config.tmodel_rnncell == "bert":
+            self.text_model = BertTextEncoder(use_finetune = True, transformers = 'bert', pretrained = "bert-base-uncased")
 
-        self.text_mlp = nn.Sequential(
-            nn.Linear(self.embedding_size * 4, self.hidden_size),
-            nn.ReLU(inplace=True),
-            nn.LayerNorm(self.hidden_size),
+            self.text_mlp = nn.Sequential(
+                nn.Linear(config.bert_text_size, self.hidden_size),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(self.hidden_size),
 
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.ReLU(inplace=True),
-            nn.LayerNorm(self.hidden_size),
+                nn.Linear(self.hidden_size, self.hidden_size),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(self.hidden_size),
 
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.ReLU(inplace=True),
-            nn.LayerNorm(self.hidden_size),
+                nn.Linear(self.hidden_size, self.hidden_size),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(self.hidden_size),
 
-            nn.Linear(self.hidden_size, self.output_size)
-        )
+                nn.Linear(self.hidden_size, self.output_size)
+            )
+        else:
+            rnn = nn.LSTM if self.config.tmodel_rnncell == "lstm" else nn.GRU
+            self.trnn1 = rnn(self.embedding_size, self.embedding_size, bidirectional=True)
+            self.trnn2 = rnn(2 * self.embedding_size, self.embedding_size, bidirectional=True)
+            self.tlayer_norm = nn.LayerNorm((2 * self.embedding_size,))
+
+            self.text_mlp = nn.Sequential(
+                nn.Linear(self.embedding_size * 4, self.hidden_size),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(self.hidden_size),
+
+                nn.Linear(self.hidden_size, self.hidden_size),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(self.hidden_size),
+
+                nn.Linear(self.hidden_size, self.hidden_size),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(self.hidden_size),
+
+                nn.Linear(self.hidden_size, self.output_size)
+            )
 
         self.constant = nn.Parameter(torch.tensor(1.0))
         self.softmax = nn.Softmax(dim = 1)
@@ -75,8 +94,18 @@ class Causal_Model(nn.Module):
         base_loss = base_output['loss']
 
         # textmodel output
-        final_h1t, final_h2t = self.extract_features(ban_sentences, lengths, self.trnn1, self.trnn2, self.tlayer_norm)
-        emb_text = torch.cat((final_h1t, final_h2t), dim=2).permute(1, 0, 2).contiguous().view(batch_size, -1)
+        if self.config.tmodel_rnncell == "bert":
+            text = torch.cat((
+                batch_sample['bert_sentences'].unsqueeze(1),
+                batch_sample['bert_sentence_att_mask'].unsqueeze(1),
+                batch_sample['bert_sentence_types'].unsqueeze(1)
+            ), dim = 1)
+            
+            emb_text = self.text_model(text)[:,0,:]
+        else:
+            final_h1t, final_h2t = self.extract_features(ban_sentences, lengths, self.trnn1, self.trnn2, self.tlayer_norm)
+            emb_text = torch.cat((final_h1t, final_h2t), dim=2).permute(1, 0, 2).contiguous().view(batch_size, -1)
+        
         o_text = self.text_mlp(emb_text)
 
         o_mutimodel_c = self.constant * torch.ones_like(o_mutimodel).cuda(self.config.gpu_id)
@@ -149,7 +178,7 @@ class Causal_Model(nn.Module):
 
     def extract_features(self, sequence, lengths, rnn1, rnn2, layer_norm):
         lengths = lengths.cpu()
-        packed_sequence = pack_padded_sequence(sequence, lengths)
+        packed_sequence = pack_padded_sequence(sequence, lengths, enforce_sorted=False)
 
         if self.config.tmodel_rnncell == "lstm":
             packed_h1, (final_h1, _) = rnn1(packed_sequence)
@@ -158,7 +187,7 @@ class Causal_Model(nn.Module):
 
         padded_h1, _ = pad_packed_sequence(packed_h1)
         normed_h1 = layer_norm(padded_h1)
-        packed_normed_h1 = pack_padded_sequence(normed_h1, lengths)
+        packed_normed_h1 = pack_padded_sequence(normed_h1, lengths, enforce_sorted=False)
 
         if self.config.tmodel_rnncell == "lstm":
             _, (final_h2, _) = rnn2(packed_normed_h1)
